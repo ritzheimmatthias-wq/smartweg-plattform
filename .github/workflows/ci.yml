@@ -20,3 +20,17 @@ jobs:
       - run: npm run build
         env:
           SMARTWEG_DATA_DIR: memory://
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t smartweg .
+      - name: Container starten und prüfen
+        run: |
+          docker run -d --name smartweg -p 3000:3000 smartweg
+          for i in $(seq 1 30); do curl -fsS -o /dev/null http://localhost:3000/anmelden && break; sleep 1; done
+          # Diese Seite liest aus der Datenbank: 404 heißt, PGlite läuft im Container.
+          status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/einladung/probe)
+          docker logs smartweg
+          test "$status" = 404

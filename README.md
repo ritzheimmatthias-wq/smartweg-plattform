@@ -39,6 +39,18 @@ Ohne Mailserver läuft smartWEG im Testmodus: Einladungen werden erstellt und ge
 
 Antworten auf eine Einladung gehen an die E-Mail-Adresse der Verwaltung. Die Beispiel-WEG verschickt nie echte E-Mails.
 
+## Betrieb
+
+Das `Dockerfile` baut einen eigenständigen Container. Die Datenbank liegt im Container unter `/data`; dieser Ordner muss auf einem dauerhaften Volume liegen.
+
+Für Render (render.com, Rechenzentrum Frankfurt) liegt `render.yaml` bereit:
+
+1. Bei render.com mit dem GitHub-Konto anmelden.
+2. „New“ → „Blueprint“ wählen und dieses Repository auswählen.
+3. Die Angaben für `SMTP_URL` und `SMTP_ABSENDER` leer lassen oder ausfüllen, dann „Apply“.
+
+Render baut danach bei jedem Merge in `main` automatisch neu. Kosten: Instanz „Starter“ und 1 GB Festplatte, aktuelle Preise unter render.com/pricing. Eine Festplatte setzt einen bezahlten Tarif voraus.
+
 ## Prüfen
 
 ```bash
