@@ -11,4 +11,5 @@ docker compose stop app
 trap 'docker compose start app' EXIT
 docker compose run --rm --no-deps -v "$ORDNER":/ziel --entrypoint tar app czf "/ziel/$(basename "$DATEI")" -C /data .
 echo "$(date -Is) Sicherung $DATEI"
-ls -1t "$ORDNER"/smartweg-*.tar.gz | tail -n +15 | xargs -r rm --
+# Die Dateinamen enthalten das Datum, absteigend sortiert stehen die ältesten hinten.
+find "$ORDNER" -maxdepth 1 -type f -name 'smartweg-*.tar.gz' | sort -r | tail -n +15 | xargs -r rm --

@@ -41,4 +41,4 @@ jobs:
           for i in $(seq 1 30); do curl -fsSk -o /dev/null https://localhost/anmelden && exit 0; sleep 1; done
           exit 1
       - if: failure()
-        run: docker compose logs
+        run: DOMAIN=localhost docker compose logs || true
