@@ -1,0 +1,29 @@
+# Betrieb auf einem eigenen Server (z. B. Hostinger-VPS). Einrichtung: deploy/install.sh
+# Caddy nimmt Anfragen für $DOMAIN an und holt das HTTPS-Zertifikat selbst.
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - daten:/data
+
+  caddy:
+    image: caddy:2.10
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN fehlt in .env}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_daten:/data
+    depends_on:
+      - app
+
+volumes:
+  daten:
+  caddy_daten:

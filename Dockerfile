@@ -1,4 +1,5 @@
 # smartWEG als Container: Next.js im Standalone-Modus, Daten (PGlite) im Volume unter /data.
+# Auf dem Server startet docker-compose.yml diesen Container zusammen mit Caddy für HTTPS.
 
 FROM node:22-bookworm-slim AS bau
 WORKDIR /app
@@ -18,7 +19,7 @@ COPY --from=bau /app/.next/standalone ./
 COPY --from=bau /app/.next/static ./.next/static
 # PGlite lädt WebAssembly- und Datendateien zur Laufzeit; das Paket kommt vollständig mit.
 COPY --from=bau /app/node_modules/@electric-sql/pglite ./node_modules/@electric-sql/pglite
-# Läuft als root, damit das vom Hoster eingehängte Volume ohne weitere Rechte beschreibbar ist.
+# Läuft als root, damit das eingehängte Volume ohne weitere Rechte beschreibbar ist.
 RUN mkdir -p /data
 EXPOSE 3000
 CMD ["node", "server.js"]

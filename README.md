@@ -41,15 +41,27 @@ Antworten auf eine Einladung gehen an die E-Mail-Adresse der Verwaltung. Die Bei
 
 ## Betrieb
 
-Das `Dockerfile` baut einen eigenständigen Container. Die Datenbank liegt im Container unter `/data`; dieser Ordner muss auf einem dauerhaften Volume liegen.
+smartWEG läuft auf einem eigenen Linux-Server, zum Beispiel einem Hostinger-VPS mit Ubuntu 24.04. `docker-compose.yml` startet zwei Dienste:
+- die App aus dem `Dockerfile`, mit der Datenbank in einem Docker-Volume
+- Caddy, das HTTPS-Zertifikate selbst holt
 
-Für Render (render.com, Rechenzentrum Frankfurt) liegt `render.yaml` bereit:
+Einrichtung, einmal als root auf dem Server:
 
-1. Bei render.com mit dem GitHub-Konto anmelden.
-2. „New“ → „Blueprint“ wählen und dieses Repository auswählen.
-3. Die Angaben für `SMTP_URL` und `SMTP_ABSENDER` leer lassen oder ausfüllen, dann „Apply“.
+```bash
+curl -fsSL https://raw.githubusercontent.com/ritzheimmatthias-wq/smartweg-plattform/main/deploy/install.sh | bash -s -- meine-domain.de
+```
 
-Render baut danach bei jedem Merge in `main` automatisch neu. Kosten: Instanz „Starter“ und 1 GB Festplatte, aktuelle Preise unter render.com/pricing. Eine Festplatte setzt einen bezahlten Tarif voraus.
+Ohne Domain nimmt das Skript den Hostnamen des Servers, bei Hostinger etwa `srv123456.hstgr.cloud`. Eine eigene Domain braucht einen DNS-Eintrag (A-Record) auf die IP des Servers.
+
+Danach läuft alles von selbst:
+
+| Was | Wie |
+| --- | --- |
+| Neue Versionen | `deploy/update.sh` prüft alle 5 Minuten, ob es auf `main` Neues gibt, und baut dann neu. |
+| Sicherung | `deploy/sicherung.sh` sichert die Datenbank jede Nacht um 3:30 Uhr nach `/opt/smartweg-sicherungen` und behält 14 Stände. |
+| Einstellungen | `/opt/smartweg/.env`: Domain und SMTP für den E-Mail-Versand. Nach Änderungen `cd /opt/smartweg && docker compose up -d`. |
+
+Protokolle stehen in `/var/log/smartweg-update.log` und `/var/log/smartweg-sicherung.log`.
 
 ## Prüfen
 
