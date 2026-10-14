@@ -3,13 +3,15 @@ import { AktionsFormular } from "@/components/aktions-formular";
 import { FristStatus } from "@/components/frist-status";
 import { legeVersammlungAn } from "@/lib/aktionen/versammlung";
 import { mitgliedschaft } from "@/lib/auth";
-import { versammlungenDerWeg } from "@/lib/daten";
+import { einladungsstand, versammlungenDerWeg } from "@/lib/daten";
 import { formatDatumLang } from "@/lib/format";
 
 export default async function Versammlungen({ params }: { params: Promise<{ wegId: string }> }) {
   const { wegId } = await params;
   const { weg, darfBearbeiten } = await mitgliedschaft(wegId);
-  const versammlungen = await versammlungenDerWeg(weg.id);
+  const versammlungen = await Promise.all(
+    (await versammlungenDerWeg(weg.id)).map(async (v) => ({ ...v, nachweis: await einladungsstand(weg.id, v.id, v.datum) })),
+  );
 
   return (
     <>
@@ -34,7 +36,7 @@ export default async function Versammlungen({ params }: { params: Promise<{ wegI
                   {formatDatumLang(v.datum)}, {v.uhrzeit} Uhr · {v.ort}
                   {v.onlineTeilnahme ? " · auch online" : ""}
                 </span>
-                <FristStatus datum={v.datum} versandt={v.einladungVersandtAm} weg={v.versandweg} />
+                <FristStatus datum={v.datum} versandt={v.einladungVersandtAm} weg={v.versandweg} nachweis={v.nachweis} />
               </li>
             ))}
           </ul>

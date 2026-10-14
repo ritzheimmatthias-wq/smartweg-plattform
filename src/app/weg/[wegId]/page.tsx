@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FristStatus } from "@/components/frist-status";
 import { mitgliedschaft } from "@/lib/auth";
-import { beschluesseDerWeg, einheitenDerWeg, versammlungenDerWeg } from "@/lib/daten";
+import { beschluesseDerWeg, einheitenDerWeg, einladungsstand, versammlungenDerWeg } from "@/lib/daten";
 import { formatDatum, formatZahl, PRINZIP_TEXT } from "@/lib/format";
 
 export default async function Uebersicht({ params }: { params: Promise<{ wegId: string }> }) {
@@ -17,6 +17,7 @@ export default async function Uebersicht({ params }: { params: Promise<{ wegId: 
   const eigentuemer = new Set(einheiten.flatMap((e) => e.eigentuemer)).size;
   const heute = new Date();
   const naechste = [...versammlungen].reverse().find((v) => v.datum >= new Date(heute.toISOString().slice(0, 10)));
+  const nachweis = naechste ? await einladungsstand(weg.id, naechste.id, naechste.datum) : null;
 
   return (
     <>
@@ -39,7 +40,7 @@ export default async function Uebersicht({ params }: { params: Promise<{ wegId: 
           {naechste ? (
             <>
               <p className="kennzahl">{formatDatum(naechste.datum)}</p>
-              <FristStatus datum={naechste.datum} versandt={naechste.einladungVersandtAm} weg={naechste.versandweg} />
+              <FristStatus datum={naechste.datum} versandt={naechste.einladungVersandtAm} weg={naechste.versandweg} nachweis={nachweis} />
               <Link href={`${basis}/versammlungen/${naechste.id}`}>Zur Versammlung</Link>
             </>
           ) : (

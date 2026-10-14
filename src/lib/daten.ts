@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq } from "drizzle-orm";
 import type { Einheit, Stimmabgabe } from "@/domain/abstimmung";
+import { empfaenger, type Fristnachweis, fristnachweis } from "@/domain/einladung";
 import { getDb } from "@/db/client";
 import * as s from "@/db/schema";
 
@@ -86,4 +87,37 @@ export async function beschluesseDerWeg(wegId: string) {
 export async function beschlussZuTop(topId: string) {
   const db = await getDb();
   return db.query.beschluss.findFirst({ where: eq(s.beschluss.topId, topId) });
+}
+
+export async function einladungenZurVersammlung(versammlungId: string) {
+  const db = await getDb();
+  return db.query.einladung.findMany({ where: eq(s.einladung.versammlungId, versammlungId), orderBy: asc(s.einladung.name) });
+}
+
+/** Für die öffentliche Bestätigungsseite: die Einladung samt Versammlung und WEG. */
+export async function einladungZumToken(token: string) {
+  const db = await getDb();
+  const [z] = await db
+    .select({ einladung: s.einladung, versammlung: s.versammlung, weg: s.weg })
+    .from(s.einladung)
+    .innerJoin(s.versammlung, eq(s.versammlung.id, s.einladung.versammlungId))
+    .innerJoin(s.weg, eq(s.weg.id, s.versammlung.wegId))
+    .where(eq(s.einladung.token, token));
+  return z ?? null;
+}
+
+/**
+ * Fristnachweis aus den Einzel-Einladungen, gerechnet gegen die heutigen Eigentümer.
+ * null, solange smartWEG für diese Versammlung keine Einladung erstellt hat.
+ */
+export async function einladungsstand(wegId: string, versammlungId: string, datum: Date): Promise<Fristnachweis | null> {
+  const [zeilen, einheiten] = await Promise.all([einladungenZurVersammlung(versammlungId), einheitenDerWeg(wegId)]);
+  if (zeilen.length === 0) return null;
+  const heute = empfaenger(einheiten).map((p) => p.personId);
+  const aktuelle = zeilen.filter((z) => z.personId && heute.includes(z.personId));
+  return fristnachweis(
+    datum,
+    aktuelle.map((z) => ({ personId: z.personId!, versandweg: z.versandweg, versandtAm: z.status === "versandt" ? z.versandtAm : null })),
+    heute.length,
+  );
 }

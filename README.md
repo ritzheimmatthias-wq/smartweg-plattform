@@ -10,11 +10,13 @@ Ausbaustufe für das Paket „Selbstverwalter“:
 - **Eigene WEGs:** jede Gemeinschaft legt ihre WEG mit Einheiten, MEA und Eigentümern an. Wer die WEG anlegt, verwaltet sie.
 - **Zugriff für Eigentümer:** wer sich mit der E-Mail-Adresse registriert, die bei einem Eigentümer hinterlegt ist, sieht diese WEG automatisch mit Lesezugriff. Fremde WEGs sind nicht erreichbar (404).
 - **Übersicht:** Einheiten, Eigentümer, Miteigentumsanteile, Stimmrechtsprinzip
-- **Versammlungen:** planen, Einladungsfrist nach § 24 Abs. 4 WEG prüfen (3 Wochen ab Zugang, Brief mit 3 Tagen Laufzeit), Versand vermerken, Tagesordnung anlegen
+- **Versammlungen:** planen, Tagesordnung anlegen, Einladungsfrist nach § 24 Abs. 4 WEG prüfen (3 Wochen ab Zugang, Brief mit 3 Tagen Laufzeit)
+- **Einladung per E-Mail:** ein Klick lädt alle Eigentümer mit Tagesordnung und Beschlussanträgen ein. Eigentümer ohne E-Mail-Adresse bekommen einen Brief zum Ausdrucken, dessen Versand vermerkt wird. Ein Link in der Einladung lässt Eigentümer den Empfang bestätigen.
+- **Fristnachweis:** für jeden Eigentümer Versandweg, Versandzeit, rechnerischer Zugang, Vorlauf in Tagen und Empfangsbestätigung, samt versandtem Text. Als Seite zum Drucken oder Speichern als PDF.
 - **Abstimmung:** Stimmen je Einheit erfassen und nach Kopf-, Objekt- oder Wertprinzip zählen (§ 25 WEG), einfache oder qualifizierte Mehrheit (§ 21 Abs. 2 Nr. 1 WEG)
 - **Beschlusssammlung:** verkündete Beschlüsse werden fortlaufend nummeriert mit Wortlaut, Ort und Datum eingetragen (§ 24 Abs. 7 WEG)
 
-Noch nicht enthalten: Passwort zurücksetzen, E-Mail-Bestätigung, Versand von Einladungen, Online-Teilnahme, Dokumente, Buchhaltung.
+Noch nicht enthalten: Passwort zurücksetzen, E-Mail-Bestätigung bei der Registrierung, Online-Teilnahme, Dokumente, Buchhaltung.
 
 ## Starten
 
@@ -24,6 +26,18 @@ npm run dev
 ```
 
 Dann http://localhost:3000 öffnen. Die Datenbank (PGlite, ein eingebettetes Postgres) liegt unter `.data/pglite` und wird beim ersten Start mit der Beispiel-WEG „Lindenstraße 12“ gefüllt (6 Einheiten, 1.000 MEA, alle Namen erfunden). Auf der Anmeldeseite öffnet „Beispiel ansehen“ diese WEG ohne Passwort; `SMARTWEG_BEISPIEL=aus` schaltet das ab. Zum Zurücksetzen den Ordner löschen. `SMARTWEG_DATA_DIR=memory://` hält alles im Arbeitsspeicher.
+
+### E-Mail-Versand
+
+Ohne Mailserver läuft smartWEG im Testmodus: Einladungen werden erstellt und gespeichert, aber nicht verschickt. Für echten Versand:
+
+| Variable | Beispiel |
+| --- | --- |
+| `SMTP_URL` | `smtps://benutzer:passwort@mail.example.de:465` |
+| `SMTP_ABSENDER` | `smartWEG <einladung@smartweg.de>` |
+| `SMARTWEG_URL` | `https://app.smartweg.de` (für den Bestätigungslink; sonst aus der Anfrage) |
+
+Antworten auf eine Einladung gehen an die E-Mail-Adresse der Verwaltung. Die Beispiel-WEG verschickt nie echte E-Mails.
 
 ## Prüfen
 

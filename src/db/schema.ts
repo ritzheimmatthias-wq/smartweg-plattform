@@ -73,6 +73,29 @@ export const versammlung = pgTable("versammlung", {
   einladungVersandtAm: date("einladung_versandt_am", { mode: "date" }),
 });
 
+/** Eine Einladung je Eigentümer und Versammlung; Name, Adresse und Text bleiben als Nachweis gespeichert. */
+export const einladung = pgTable(
+  "einladung",
+  {
+    id: text("id").primaryKey(),
+    versammlungId: text("versammlung_id").notNull().references(() => versammlung.id),
+    personId: text("person_id").references(() => person.id, { onDelete: "set null" }),
+    name: text("name").notNull(),
+    email: text("email"),
+    einheiten: text("einheiten").notNull(),
+    versandweg: text("versandweg").$type<Versandweg>().notNull(),
+    status: text("status").$type<"versandt" | "fehler" | "offen">().notNull(),
+    fehler: text("fehler"),
+    testmodus: boolean("testmodus").notNull().default(false),
+    versandtAm: timestamp("versandt_am", { mode: "date" }),
+    betreff: text("betreff").notNull(),
+    inhalt: text("inhalt").notNull(),
+    token: text("token").notNull().unique(),
+    bestaetigtAm: timestamp("bestaetigt_am", { mode: "date" }),
+  },
+  (t) => [unique().on(t.versammlungId, t.personId)],
+);
+
 export const top = pgTable("top", {
   id: text("id").primaryKey(),
   versammlungId: text("versammlung_id").notNull().references(() => versammlung.id),
