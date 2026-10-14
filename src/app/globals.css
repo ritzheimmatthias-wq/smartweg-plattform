@@ -1,0 +1,99 @@
+/* smartWEG: Navy als Fundament, Cyan als Akzent, Logo-Kontrast aus Light und ExtraBold. Eckig, keine Schatten. */
+:root {
+  --cyan: #02c2f5;
+  --cyan-hover: #35d0f8;
+  --mint: #64dabc;
+  --nein: #f2856d;
+  --navy: #0c2745;
+  --navy-2: #12345a;
+  --sky: #9ed9f5;
+  --paper: #f4f7fa;
+  --white: #ffffff;
+  --ink: #0c2745;
+  --ink-2: #4a5f75;
+  --line: #d3dde7;
+  --link: #0072a3;
+  --ok-bg: #e3f6f0;
+  --ok-ink: #17694f;
+  --warn-bg: #fdece7;
+  --warn-ink: #a23b20;
+  --f-display: var(--font-montserrat), "Helvetica Neue", Arial, sans-serif;
+  --f-body: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: var(--font-plex-mono), ui-monospace, Menlo, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--paper); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.55; }
+a { color: var(--link); }
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--f-display); line-height: 1.15; margin: 0; text-wrap: balance; }
+h1 { font-size: 30px; font-weight: 800; }
+h1 .light, h2 .light { font-weight: 300; }
+h2 { font-size: 20px; font-weight: 800; }
+p { margin: 0; }
+
+.kopf { background: var(--navy); color: var(--white); border-bottom: 3px solid var(--cyan); }
+.kopf-inner { max-width: 1120px; margin: 0 auto; padding: 12px 20px; display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+.kopf .logo svg { height: 28px; width: auto; display: block; }
+.kopf nav { display: flex; gap: 20px; flex-wrap: wrap; }
+.kopf nav a { color: var(--sky); text-decoration: none; font-family: var(--f-mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+.kopf nav a:hover, .kopf nav a[aria-current="page"] { color: var(--white); }
+.kopf .weg { margin-left: auto; font-family: var(--f-mono); font-size: 12px; color: var(--sky); }
+.demo { background: var(--navy-2); color: var(--sky); font-family: var(--f-mono); font-size: 12px; text-align: center; padding: 6px 12px; }
+
+main { max-width: 1120px; margin: 0 auto; padding: 32px 20px 64px; display: grid; gap: 28px; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--link); }
+.seitenkopf { display: grid; gap: 8px; }
+.seitenkopf p { color: var(--ink-2); max-width: 65ch; }
+
+.flaeche { background: var(--white); border: 1px solid var(--line); padding: 20px; display: grid; gap: 14px; min-width: 0; }
+.raster { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.kennzahl { font-family: var(--f-display); font-weight: 300; font-size: 34px; line-height: 1; font-variant-numeric: tabular-nums; }
+.klein { font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); }
+.para { font-family: var(--f-mono); font-size: 11px; color: var(--ink-2); }
+
+.tabelle-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th { text-align: left; font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); font-weight: 500; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.zahl, th.zahl { text-align: right; }
+tfoot td { font-weight: 600; border-bottom: 0; }
+
+.status { justify-self: start; display: inline-block; font-family: var(--f-mono); font-size: 11px; padding: 3px 8px; letter-spacing: .04em; }
+.status.ok { background: var(--ok-bg); color: var(--ok-ink); }
+.status.warn { background: var(--warn-bg); color: var(--warn-ink); }
+.status.neutral { background: var(--paper); color: var(--ink-2); border: 1px solid var(--line); }
+
+.hinweis { padding: 12px 14px; border-left: 3px solid var(--warn-ink); background: var(--warn-bg); color: var(--warn-ink); }
+.hinweis.ok { border-color: var(--ok-ink); background: var(--ok-bg); color: var(--ok-ink); }
+
+form.formular { display: grid; gap: 12px; }
+.felder { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+label { display: grid; gap: 4px; font-weight: 500; font-size: 14px; }
+label.check { display: flex; gap: 8px; align-items: center; font-weight: 400; }
+input, select, textarea { font: inherit; padding: 9px 10px; border: 1px solid var(--line); background: var(--white); color: var(--ink); border-radius: 0; width: 100%; }
+label.check input { width: auto; }
+textarea { min-height: 84px; resize: vertical; }
+.knopf { display: inline-flex; justify-content: center; align-items: center; font: 600 14px/1 var(--f-body); padding: 12px 18px; border: 1px solid var(--ink); background: transparent; color: var(--ink); cursor: pointer; text-decoration: none; justify-self: start; }
+.knopf:hover { background: var(--ink); color: var(--white); }
+.knopf.primaer { background: var(--cyan); border-color: var(--cyan); color: var(--navy); }
+.knopf.primaer:hover { background: var(--cyan-hover); }
+
+.liste { list-style: none; margin: 0; padding: 0; display: grid; }
+.liste li { border-bottom: 1px solid var(--line); padding: 14px 0; display: grid; gap: 4px; }
+.liste li:last-child { border-bottom: 0; }
+.liste a { font-weight: 600; text-decoration: none; color: var(--ink); }
+.liste a:hover { color: var(--link); }
+
+.stimmzeile { display: grid; grid-template-columns: minmax(0, 1.4fr) 70px minmax(0, 2fr); gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.stimmzeile .wahl { display: flex; flex-wrap: wrap; gap: 6px; }
+.wahl label { display: inline-flex; align-items: center; gap: 6px; font-weight: 400; border: 1px solid var(--line); padding: 6px 10px; cursor: pointer; }
+.wahl input { width: auto; margin: 0; }
+.wahl label:has(input:checked) { border-color: var(--ink); background: var(--paper); font-weight: 600; }
+@media (max-width: 640px) { .stimmzeile { grid-template-columns: 1fr; } }
+
+.balken { display: flex; height: 14px; background: var(--paper); border: 1px solid var(--line); }
+.balken span { display: block; height: 100%; }
+.balken .ja { background: var(--mint); } .balken .nein { background: var(--nein); } .balken .enth { background: var(--sky); }
+.legende { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--f-mono); font-size: 12px; }
+.legende b { font-weight: 500; font-variant-numeric: tabular-nums; }
