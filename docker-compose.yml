@@ -1,0 +1,16 @@
+# Betrieb auf einem eigenen Server. Einrichtung: deploy/install.sh
+# Dazu kommt eine Ergänzung für HTTPS, ausgewählt über COMPOSE_FILE in .env:
+#   deploy/caddy.yml    Server ohne eigenen Proxy: Caddy belegt 80/443 und holt das Zertifikat.
+#   deploy/traefik.yml  Server mit laufendem Traefik (z. B. neben n8n): smartWEG meldet sich dort an.
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - daten:/data
+
+volumes:
+  daten:

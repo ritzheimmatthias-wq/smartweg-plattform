@@ -39,6 +39,30 @@ Ohne Mailserver läuft smartWEG im Testmodus: Einladungen werden erstellt und ge
 
 Antworten auf eine Einladung gehen an die E-Mail-Adresse der Verwaltung. Die Beispiel-WEG verschickt nie echte E-Mails.
 
+## Betrieb
+
+smartWEG läuft auf einem eigenen Linux-Server, zum Beispiel einem Hostinger-VPS mit Ubuntu 24.04. `docker-compose.yml` startet die App aus dem `Dockerfile`, mit der Datenbank in einem Docker-Volume. Für HTTPS gibt es zwei Ergänzungen:
+- `deploy/traefik.yml`: Läuft auf dem Server schon Traefik, etwa neben n8n, meldet sich smartWEG dort an. Netz, Einstiegspunkt und Zertifikatsverfahren liest das Einrichtungsskript aus dem laufenden Traefik aus.
+- `deploy/caddy.yml`: Sonst kommt Caddy dazu, belegt die Ports 80 und 443 und holt das Zertifikat selbst.
+
+Einrichtung, einmal als root auf dem Server:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ritzheimmatthias-wq/smartweg-plattform/main/deploy/install.sh | bash -s -- meine-domain.de
+```
+
+Ohne Domain nimmt das Skript neben Traefik eine Adresse von sslip.io, die auf die IP des Servers zeigt, etwa `smartweg.187-127-83-108.sslip.io`. Ohne Traefik nimmt es den Hostnamen des Servers. Eine eigene Domain braucht einen DNS-Eintrag (A-Record) auf die IP des Servers.
+
+Danach läuft alles von selbst:
+
+| Was | Wie |
+| --- | --- |
+| Neue Versionen | `deploy/update.sh` prüft alle 5 Minuten, ob es auf `main` Neues gibt, und baut dann neu. |
+| Sicherung | `deploy/sicherung.sh` sichert die Datenbank jede Nacht um 3:30 Uhr nach `/opt/smartweg-sicherungen` und behält 14 Stände. |
+| Einstellungen | `/opt/smartweg/.env`: Domain, Proxy und SMTP für den E-Mail-Versand. Nach Änderungen `cd /opt/smartweg && docker compose up -d`. |
+
+Protokolle stehen in `/var/log/smartweg-update.log` und `/var/log/smartweg-sicherung.log`.
+
 ## Prüfen
 
 ```bash

@@ -20,3 +20,61 @@ jobs:
       - run: npm run build
         env:
           SMARTWEG_DATA_DIR: memory://
+
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skripte prüfen
+        run: shellcheck deploy/*.sh
+      - name: Wie auf dem Server starten (Caddy mit internem Zertifikat für localhost)
+        run: |
+          printf 'COMPOSE_FILE=docker-compose.yml:deploy/caddy.yml\nDOMAIN=localhost\n' > .env
+          docker compose up -d --build
+          for i in $(seq 1 60); do curl -fsSk -o /dev/null https://localhost/anmelden && break; sleep 1; done
+          # Diese Seite liest aus der Datenbank: 404 heißt, PGlite läuft im Container.
+          test "$(curl -sk -o /dev/null -w '%{http_code}' https://localhost/einladung/probe)" = 404
+      - name: Sicherung erstellen
+        run: |
+          SMARTWEG_SICHERUNGEN="$RUNNER_TEMP/sicherungen" deploy/sicherung.sh
+          tar tzf "$RUNNER_TEMP"/sicherungen/smartweg-*.tar.gz | grep -q PG_VERSION
+          for i in $(seq 1 30); do curl -fsSk -o /dev/null https://localhost/anmelden && exit 0; sleep 1; done
+          exit 1
+      - if: failure()
+        run: docker compose logs || true
+
+  # Wie auf dem Hostinger-VPS: Traefik im Host-Netz, n8n im Netz n8n-setup_default.
+  neben-traefik:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Traefik und einen Dienst wie n8n starten
+        run: |
+          docker network create n8n-setup_default
+          docker run -d --name traefik-traefik-1 --network host -v /var/run/docker.sock:/var/run/docker.sock:ro traefik:v3.5 \
+            --providers.docker=true --providers.docker.exposedbydefault=false \
+            --entrypoints.web.address=:80 --entrypoints.websecure.address=:443 \
+            --certificatesresolvers.letsencrypt.acme.httpchallenge=true \
+            --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web \
+            --certificatesresolvers.letsencrypt.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory \
+            --certificatesresolvers.letsencrypt.acme.email=ci@example.org \
+            --certificatesresolvers.letsencrypt.acme.storage=/tmp/acme.json
+          docker run -d --name n8n-setup-n8n-1 --network n8n-setup_default \
+            -l traefik.enable=true -l traefik.docker.network=n8n-setup_default \
+            -l 'traefik.http.routers.n8n.rule=Host(`n8n.test`)' -l traefik.http.routers.n8n.entrypoints=websecure \
+            -l traefik.http.routers.n8n.tls=true traefik/whoami:v1.11
+      - name: Einrichtungsskript ausführen
+        run: sudo SMARTWEG_ZWEIG="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}" bash deploy/install.sh smartweg.test
+      - name: smartWEG über Traefik erreichen, n8n weiterhin erreichbar
+        run: |
+          for i in $(seq 1 60); do curl -fsSk -o /dev/null --resolve smartweg.test:443:127.0.0.1 https://smartweg.test/anmelden && break; sleep 1; done
+          # 404 von smartWEG selbst (HTML-Seite), nicht das "404 page not found" von Traefik.
+          curl -sk -o probe.html -w '%{http_code}' --resolve smartweg.test:443:127.0.0.1 https://smartweg.test/einladung/probe | grep -qx 404
+          grep -q 'smartWEG' probe.html
+          curl -fsSk -o /dev/null --resolve n8n.test:443:127.0.0.1 https://n8n.test/
+          sudo grep -q 'COMPOSE_FILE=docker-compose.yml:deploy/traefik.yml' /opt/smartweg/.env
+      - if: failure()
+        run: |
+          sudo cat /opt/smartweg/.env || true
+          docker logs traefik-traefik-1 2>&1 | tail -50
+          cd /opt/smartweg && sudo docker compose logs || true
