@@ -68,9 +68,11 @@ jobs:
       - name: smartWEG über Traefik erreichen, n8n weiterhin erreichbar
         run: |
           for i in $(seq 1 60); do curl -fsSk -o /dev/null --resolve smartweg.test:443:127.0.0.1 https://smartweg.test/anmelden && break; sleep 1; done
-          test "$(curl -sk -o /dev/null -w '%{http_code}' --resolve smartweg.test:443:127.0.0.1 https://smartweg.test/einladung/probe)" = 404
+          # 404 von smartWEG selbst (HTML-Seite), nicht das "404 page not found" von Traefik.
+          curl -sk -o probe.html -w '%{http_code}' --resolve smartweg.test:443:127.0.0.1 https://smartweg.test/einladung/probe | grep -qx 404
+          grep -q 'smartWEG' probe.html
           curl -fsSk -o /dev/null --resolve n8n.test:443:127.0.0.1 https://n8n.test/
-          grep -q 'COMPOSE_FILE=docker-compose.yml:deploy/traefik.yml' /opt/smartweg/.env
+          sudo grep -q 'COMPOSE_FILE=docker-compose.yml:deploy/traefik.yml' /opt/smartweg/.env
       - if: failure()
         run: |
           sudo cat /opt/smartweg/.env || true
