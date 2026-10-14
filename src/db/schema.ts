@@ -9,8 +9,37 @@ export const weg = pgTable("weg", {
   stimmrechtsprinzip: text("stimmrechtsprinzip").$type<Stimmrechtsprinzip>().notNull().default("kopf"),
 });
 
+export const konto = pgTable("konto", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  name: text("name").notNull(),
+  passwortHash: text("passwort_hash").notNull(),
+  erstelltAm: timestamp("erstellt_am", { mode: "date" }).notNull().defaultNow(),
+});
+
+export const sitzung = pgTable("sitzung", {
+  tokenHash: text("token_hash").primaryKey(),
+  kontoId: text("konto_id").notNull().references(() => konto.id),
+  laeuftAb: timestamp("laeuft_ab", { mode: "date" }).notNull(),
+});
+
+export type Rolle = "verwalter" | "eigentuemer";
+
+export const mitglied = pgTable(
+  "mitglied",
+  {
+    wegId: text("weg_id").notNull().references(() => weg.id),
+    kontoId: text("konto_id").notNull().references(() => konto.id),
+    rolle: text("rolle").$type<Rolle>().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.wegId, t.kontoId] })],
+);
+
+/** Eigentümer einer Einheit. Mit einem Konto verknüpft, sobald sich jemand mit derselben E-Mail anmeldet. */
 export const person = pgTable("person", {
   id: text("id").primaryKey(),
+  wegId: text("weg_id").notNull().references(() => weg.id),
+  kontoId: text("konto_id").references(() => konto.id),
   name: text("name").notNull(),
   email: text("email"),
 });

@@ -1,19 +1,25 @@
-import { asc, desc, eq } from "drizzle-orm";
+import "server-only";
+import { and, asc, desc, eq } from "drizzle-orm";
 import type { Einheit, Stimmabgabe } from "@/domain/abstimmung";
 import { getDb } from "@/db/client";
-import { DEMO_WEG_ID } from "@/db/seed";
 import * as s from "@/db/schema";
 
-/** Solange es keine Anmeldung gibt, arbeitet die Oberfläche mit der Beispiel-WEG. */
-export async function aktuelleWeg() {
+// Alle Abfragen nehmen die WEG-ID entgegen. Ob das Konto dazugehört, prüft
+// vorher mitgliedschaft() in lib/auth.ts.
+
+export async function wegsDesKontos(kontoId: string) {
   const db = await getDb();
-  const w = await db.query.weg.findFirst({ where: eq(s.weg.id, DEMO_WEG_ID) });
-  if (!w) throw new Error("Beispiel-WEG fehlt in der Datenbank");
-  return w;
+  return db
+    .select({ id: s.weg.id, name: s.weg.name, adresse: s.weg.adresse, rolle: s.mitglied.rolle })
+    .from(s.mitglied)
+    .innerJoin(s.weg, eq(s.weg.id, s.mitglied.wegId))
+    .where(eq(s.mitglied.kontoId, kontoId))
+    .orderBy(asc(s.weg.name));
 }
 
 export interface EinheitMitEigentuemern extends Einheit {
   namen: string[];
+  personen: { id: string; name: string; email: string | null; hatZugang: boolean }[];
 }
 
 export async function einheitenDerWeg(wegId: string): Promise<EinheitMitEigentuemern[]> {
@@ -25,6 +31,8 @@ export async function einheitenDerWeg(wegId: string): Promise<EinheitMitEigentue
       mea: s.einheit.mea,
       personId: s.person.id,
       name: s.person.name,
+      email: s.person.email,
+      kontoId: s.person.kontoId,
     })
     .from(s.einheit)
     .leftJoin(s.eigentum, eq(s.eigentum.einheitId, s.einheit.id))
@@ -34,10 +42,11 @@ export async function einheitenDerWeg(wegId: string): Promise<EinheitMitEigentue
 
   const nachId = new Map<string, EinheitMitEigentuemern>();
   for (const z of zeilen) {
-    const e = nachId.get(z.id) ?? { id: z.id, bezeichnung: z.bezeichnung, mea: z.mea, eigentuemer: [], namen: [] };
+    const e = nachId.get(z.id) ?? { id: z.id, bezeichnung: z.bezeichnung, mea: z.mea, eigentuemer: [], namen: [], personen: [] };
     if (z.personId && z.name) {
       e.eigentuemer.push(z.personId);
       e.namen.push(z.name);
+      e.personen.push({ id: z.personId, name: z.name, email: z.email, hatZugang: Boolean(z.kontoId) });
     }
     nachId.set(z.id, e);
   }
@@ -52,17 +61,17 @@ export async function versammlungenDerWeg(wegId: string) {
   });
 }
 
-export async function versammlungMitTops(id: string) {
+export async function versammlungMitTops(wegId: string, id: string) {
   const db = await getDb();
-  const v = await db.query.versammlung.findFirst({ where: eq(s.versammlung.id, id) });
+  const v = await db.query.versammlung.findFirst({ where: and(eq(s.versammlung.id, id), eq(s.versammlung.wegId, wegId)) });
   if (!v) return null;
   const tops = await db.query.top.findMany({ where: eq(s.top.versammlungId, id), orderBy: asc(s.top.nummer) });
   return { ...v, tops };
 }
 
-export async function topMitStimmen(topId: string) {
+export async function topMitStimmen(versammlungId: string, topId: string) {
   const db = await getDb();
-  const t = await db.query.top.findFirst({ where: eq(s.top.id, topId) });
+  const t = await db.query.top.findFirst({ where: and(eq(s.top.id, topId), eq(s.top.versammlungId, versammlungId)) });
   if (!t) return null;
   const stimmen = await db.select().from(s.stimme).where(eq(s.stimme.topId, topId));
   const abgaben: Stimmabgabe[] = stimmen.map((x) => ({ einheitId: x.einheitId, wert: x.wert }));

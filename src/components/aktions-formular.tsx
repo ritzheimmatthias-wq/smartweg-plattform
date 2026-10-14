@@ -1,9 +1,9 @@
 "use client";
 
 import { useActionState } from "react";
-import type { Zustand } from "@/lib/aktionen";
+import type { Zustand } from "@/lib/zustand";
 
-/** Formular für eine Server-Aktion, das deren Fehlermeldung über den Feldern anzeigt. */
+/** Formular für eine Server-Aktion, das deren Fehler- oder Erfolgsmeldung über den Feldern anzeigt. */
 export function AktionsFormular({
   aktion,
   className,
@@ -19,6 +19,11 @@ export function AktionsFormular({
       {zustand.fehler && (
         <p className="hinweis" role="alert">
           {zustand.fehler}
+        </p>
+      )}
+      {zustand.hinweis && (
+        <p className="hinweis ok" role="status">
+          {zustand.hinweis}
         </p>
       )}
       {children}

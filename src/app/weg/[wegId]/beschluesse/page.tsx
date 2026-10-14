@@ -1,9 +1,11 @@
 import { Ergebnisbalken } from "@/components/ergebnisbalken";
-import { aktuelleWeg, beschluesseDerWeg, einheitenDerWeg } from "@/lib/daten";
+import { mitgliedschaft } from "@/lib/auth";
+import { beschluesseDerWeg, einheitenDerWeg } from "@/lib/daten";
 import { formatDatum } from "@/lib/format";
 
-export default async function Beschlusssammlung() {
-  const weg = await aktuelleWeg();
+export default async function Beschlusssammlung({ params }: { params: Promise<{ wegId: string }> }) {
+  const { wegId } = await params;
+  const { weg } = await mitgliedschaft(wegId);
   const [beschluesse, einheiten] = await Promise.all([beschluesseDerWeg(weg.id), einheitenDerWeg(weg.id)]);
   const meaSumme = einheiten.reduce((s, e) => s + e.mea, 0);
   const koepfe = new Set(einheiten.map((e) => [...e.eigentuemer].sort().join("+"))).size;

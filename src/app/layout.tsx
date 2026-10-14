@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Inter, Montserrat } from "next/font/google";
 import Link from "next/link";
-import { aktuelleWeg } from "@/lib/daten";
+import { abmelden } from "@/lib/aktionen/konto";
+import { aktuellesKonto } from "@/lib/auth";
 import Logo from "./logo";
 import "./globals.css";
 
@@ -17,25 +18,28 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const weg = await aktuelleWeg();
+  const konto = await aktuellesKonto();
   return (
     <html lang="de" className={`${montserrat.variable} ${inter.variable} ${plexMono.variable}`}>
       <body>
         <header className="kopf">
           <div className="kopf-inner">
-            <Link className="logo" href="/" aria-label="smartWEG Übersicht">
+            <Link className="logo" href="/" aria-label="smartWEG Startseite">
               <Logo />
             </Link>
-            <nav aria-label="Hauptnavigation">
-              <Link href="/">Übersicht</Link>
-              <Link href="/versammlungen">Versammlungen</Link>
-              <Link href="/beschluesse">Beschlusssammlung</Link>
-            </nav>
-            <span className="weg">{weg.name}</span>
+            {konto && (
+              <div className="konto">
+                <span>{konto.name}</span>
+                <form action={abmelden}>
+                  <button type="submit" className="link-knopf">
+                    Abmelden
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
         </header>
-        <div className="demo">Vorschau mit der Beispiel-Gemeinschaft Lindenstraße 12. Anmeldung und eigene WEGs folgen.</div>
-        <main>{children}</main>
+        {children}
       </body>
     </html>
   );

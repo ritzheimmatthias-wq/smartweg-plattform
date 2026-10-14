@@ -8,11 +8,9 @@ import { pruefeWortlaut } from "@/domain/beschlusssammlung";
 import type { Versandweg } from "@/domain/fristen";
 import { getDb } from "@/db/client";
 import * as s from "@/db/schema";
-import { aktuelleWeg, einheitenDerWeg, topMitStimmen } from "./daten";
-
-function text(form: FormData, feld: string): string {
-  return String(form.get(feld) ?? "").trim();
-}
+import { mitgliedschaft } from "@/lib/auth";
+import { einheitenDerWeg, topMitStimmen, versammlungMitTops } from "@/lib/daten";
+import { fehler, text, type Zustand } from "@/lib/zustand";
 
 function datum(form: FormData, feld: string): Date | null {
   const wert = text(form, feld);
@@ -21,14 +19,16 @@ function datum(form: FormData, feld: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-export interface Zustand {
-  fehler?: string;
+/** Schreibende Aktionen sind der Verwaltung vorbehalten; Eigentümer lesen nur. */
+async function verwaltung(wegId: string) {
+  const m = await mitgliedschaft(wegId);
+  return m.darfBearbeiten ? m : null;
 }
 
-const fehler = (text: string): Zustand => ({ fehler: text });
+const NUR_VERWALTUNG = fehler("Nur die Verwaltung der Gemeinschaft kann das ändern.");
 
-export async function legeVersammlungAn(_: Zustand, form: FormData): Promise<Zustand> {
-  const weg = await aktuelleWeg();
+export async function legeVersammlungAn(wegId: string, _: Zustand, form: FormData): Promise<Zustand> {
+  if (!(await verwaltung(wegId))) return NUR_VERWALTUNG;
   const titel = text(form, "titel");
   const tag = datum(form, "datum");
   const uhrzeit = text(form, "uhrzeit");
@@ -40,7 +40,7 @@ export async function legeVersammlungAn(_: Zustand, form: FormData): Promise<Zus
   const db = await getDb();
   await db.insert(s.versammlung).values({
     id,
-    wegId: weg.id,
+    wegId,
     titel,
     datum: tag,
     uhrzeit,
@@ -48,12 +48,12 @@ export async function legeVersammlungAn(_: Zustand, form: FormData): Promise<Zus
     onlineTeilnahme: form.get("online") === "on",
     versandweg: text(form, "versandweg") === "post" ? "post" : "email",
   });
-  revalidatePath("/versammlungen");
-  redirect(`/versammlungen/${id}`);
+  revalidatePath(`/weg/${wegId}`, "layout");
+  redirect(`/weg/${wegId}/versammlungen/${id}`);
 }
 
-export async function vermerkeEinladung(versammlungId: string, _: Zustand, form: FormData): Promise<Zustand> {
-  const pfad = `/versammlungen/${versammlungId}`;
+export async function vermerkeEinladung(wegId: string, versammlungId: string, _: Zustand, form: FormData): Promise<Zustand> {
+  if (!(await verwaltung(wegId))) return NUR_VERWALTUNG;
   const versandt = datum(form, "versandt");
   if (!versandt) return fehler("Bitte geben Sie das Versanddatum an.");
   const weg: Versandweg = text(form, "versandweg") === "post" ? "post" : "email";
@@ -61,13 +61,14 @@ export async function vermerkeEinladung(versammlungId: string, _: Zustand, form:
   await db
     .update(s.versammlung)
     .set({ einladungVersandtAm: versandt, versandweg: weg })
-    .where(eq(s.versammlung.id, versammlungId));
-  revalidatePath(pfad);
-  redirect(pfad);
+    .where(and(eq(s.versammlung.id, versammlungId), eq(s.versammlung.wegId, wegId)));
+  revalidatePath(`/weg/${wegId}`, "layout");
+  return {};
 }
 
-export async function fuegeTopHinzu(versammlungId: string, _: Zustand, form: FormData): Promise<Zustand> {
-  const pfad = `/versammlungen/${versammlungId}`;
+export async function fuegeTopHinzu(wegId: string, versammlungId: string, _: Zustand, form: FormData): Promise<Zustand> {
+  if (!(await verwaltung(wegId))) return NUR_VERWALTUNG;
+  if (!(await versammlungMitTops(wegId, versammlungId))) return fehler("Diese Versammlung gibt es nicht.");
   const titel = text(form, "titel");
   const antrag = text(form, "beschlussantrag");
   const mehrheit: Mehrheit = text(form, "mehrheit") === "zweiDrittelUndHalbeMea" ? "zweiDrittelUndHalbeMea" : "einfach";
@@ -88,27 +89,34 @@ export async function fuegeTopHinzu(versammlungId: string, _: Zustand, form: For
     beschlussantrag: antrag,
     mehrheit,
   });
-  revalidatePath(pfad);
-  redirect(pfad);
+  revalidatePath(`/weg/${wegId}`, "layout");
+  return {};
 }
 
 const WERTE: Stimmwert[] = ["ja", "nein", "enthaltung"];
 
-export async function speichereStimmen(versammlungId: string, topId: string, _: Zustand, form: FormData): Promise<Zustand> {
-  const pfad = `/versammlungen/${versammlungId}/top/${topId}`;
-  const top = await topMitStimmen(topId);
+export async function speichereStimmen(
+  wegId: string,
+  versammlungId: string,
+  topId: string,
+  _: Zustand,
+  form: FormData,
+): Promise<Zustand> {
+  const m = await verwaltung(wegId);
+  if (!m) return NUR_VERWALTUNG;
+  if (!(await versammlungMitTops(wegId, versammlungId))) return fehler("Diese Versammlung gibt es nicht.");
+  const top = await topMitStimmen(versammlungId, topId);
   if (!top) return fehler("Diesen Tagesordnungspunkt gibt es nicht.");
   if (top.verkuendetAm) return fehler("Der Beschluss ist bereits verkündet. Stimmen lassen sich nicht mehr ändern.");
 
-  const weg = await aktuelleWeg();
-  const einheiten = await einheitenDerWeg(weg.id);
+  const einheiten = await einheitenDerWeg(wegId);
   const abgaben = einheiten.flatMap((e) => {
     const wert = text(form, `stimme-${e.id}`) as Stimmwert;
     return WERTE.includes(wert) ? [{ einheitId: e.id, wert }] : [];
   });
 
   try {
-    zaehleStimmen(einheiten, abgaben, weg.stimmrechtsprinzip, top.mehrheit);
+    zaehleStimmen(einheiten, abgaben, m.weg.stimmrechtsprinzip, top.mehrheit);
   } catch (e) {
     if (e instanceof Abstimmungsfehler) return fehler(e.message);
     throw e;
@@ -119,31 +127,31 @@ export async function speichereStimmen(versammlungId: string, topId: string, _: 
     await tx.delete(s.stimme).where(eq(s.stimme.topId, topId));
     if (abgaben.length) await tx.insert(s.stimme).values(abgaben.map((a) => ({ topId, ...a })));
   });
-  revalidatePath(pfad);
-  redirect(pfad);
+  revalidatePath(`/weg/${wegId}`, "layout");
+  return { hinweis: "Stimmen gespeichert." };
 }
 
-export async function verkuendeBeschluss(versammlungId: string, topId: string, _: Zustand): Promise<Zustand> {
-  const pfad = `/versammlungen/${versammlungId}/top/${topId}`;
-  const weg = await aktuelleWeg();
-  const db = await getDb();
-  const versammlung = await db.query.versammlung.findFirst({ where: eq(s.versammlung.id, versammlungId) });
-  const top = await topMitStimmen(topId);
+export async function verkuendeBeschluss(wegId: string, versammlungId: string, topId: string, _: Zustand): Promise<Zustand> {
+  const m = await verwaltung(wegId);
+  if (!m) return NUR_VERWALTUNG;
+  const versammlung = await versammlungMitTops(wegId, versammlungId);
+  const top = versammlung ? await topMitStimmen(versammlungId, topId) : null;
   if (!versammlung || !top) return fehler("Diesen Tagesordnungspunkt gibt es nicht.");
   if (top.verkuendetAm) return fehler("Der Beschluss ist bereits verkündet.");
   if (top.abgaben.length === 0) return fehler("Es wurden noch keine Stimmen erfasst.");
 
-  const einheiten = await einheitenDerWeg(weg.id);
-  const ergebnis = zaehleStimmen(einheiten, top.abgaben, weg.stimmrechtsprinzip, top.mehrheit);
+  const einheiten = await einheitenDerWeg(wegId);
+  const ergebnis = zaehleStimmen(einheiten, top.abgaben, m.weg.stimmrechtsprinzip, top.mehrheit);
 
+  const db = await getDb();
   await db.transaction(async (tx) => {
     const [{ hoechste }] = await tx
       .select({ hoechste: max(s.beschluss.nummer) })
       .from(s.beschluss)
-      .where(eq(s.beschluss.wegId, weg.id));
+      .where(eq(s.beschluss.wegId, wegId));
     await tx.insert(s.beschluss).values({
       id: crypto.randomUUID(),
-      wegId: weg.id,
+      wegId,
       topId,
       nummer: (hoechste ?? 0) + 1,
       wortlaut: top.beschlussantrag,
@@ -152,12 +160,8 @@ export async function verkuendeBeschluss(versammlungId: string, topId: string, _
       angenommen: ergebnis.angenommen,
       ergebnis: { ja: ergebnis.ja, nein: ergebnis.nein, enthaltung: ergebnis.enthaltung, prinzip: ergebnis.prinzip },
     });
-    await tx
-      .update(s.top)
-      .set({ verkuendetAm: new Date() })
-      .where(and(eq(s.top.id, topId), eq(s.top.versammlungId, versammlungId)));
+    await tx.update(s.top).set({ verkuendetAm: new Date() }).where(eq(s.top.id, topId));
   });
-  revalidatePath(pfad);
-  revalidatePath("/beschluesse");
-  redirect(pfad);
+  revalidatePath(`/weg/${wegId}`, "layout");
+  return {};
 }
