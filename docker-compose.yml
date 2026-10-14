@@ -1,5 +1,7 @@
-# Betrieb auf einem eigenen Server (z. B. Hostinger-VPS). Einrichtung: deploy/install.sh
-# Caddy nimmt Anfragen für $DOMAIN an und holt das HTTPS-Zertifikat selbst.
+# Betrieb auf einem eigenen Server. Einrichtung: deploy/install.sh
+# Dazu kommt eine Ergänzung für HTTPS, ausgewählt über COMPOSE_FILE in .env:
+#   deploy/caddy.yml    Server ohne eigenen Proxy: Caddy belegt 80/443 und holt das Zertifikat.
+#   deploy/traefik.yml  Server mit laufendem Traefik (z. B. neben n8n): smartWEG meldet sich dort an.
 services:
   app:
     build: .
@@ -10,20 +12,5 @@ services:
     volumes:
       - daten:/data
 
-  caddy:
-    image: caddy:2.10
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      DOMAIN: ${DOMAIN:?DOMAIN fehlt in .env}
-    volumes:
-      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_daten:/data
-    depends_on:
-      - app
-
 volumes:
   daten:
-  caddy_daten:

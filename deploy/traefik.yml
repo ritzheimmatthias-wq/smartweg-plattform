@@ -1,0 +1,23 @@
+# smartWEG hinter einem vorhandenen Traefik (Docker-Provider, exposedByDefault=false).
+services:
+  app:
+    networks:
+      - traefik
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETZ:?TRAEFIK_NETZ fehlt in .env}
+      traefik.http.routers.smartweg.rule: Host(`${DOMAIN:?DOMAIN fehlt in .env}`)
+      traefik.http.routers.smartweg.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.smartweg.tls: "true"
+      traefik.http.routers.smartweg.tls.certresolver: ${TRAEFIK_RESOLVER:-letsencrypt}
+      traefik.http.routers.smartweg.middlewares: smartweg-sicher
+      traefik.http.middlewares.smartweg-sicher.headers.contentTypeNosniff: "true"
+      traefik.http.middlewares.smartweg-sicher.headers.frameDeny: "true"
+      traefik.http.middlewares.smartweg-sicher.headers.referrerPolicy: same-origin
+      traefik.http.middlewares.smartweg-sicher.headers.stsSeconds: "31536000"
+      traefik.http.services.smartweg.loadbalancer.server.port: "3000"
+
+networks:
+  traefik:
+    name: ${TRAEFIK_NETZ}
+    external: true
