@@ -16,7 +16,8 @@
     "drizzle-orm": "^0.45.4",
     "next": "^15.5.27",
     "react": "19.2",
-    "react-dom": "19.2"
+    "react-dom": "19.2",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

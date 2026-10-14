@@ -3,23 +3,26 @@ import { notFound } from "next/navigation";
 import { AktionsFormular } from "@/components/aktions-formular";
 import { FristStatus } from "@/components/frist-status";
 import { spaetesterVersand } from "@/domain/fristen";
-import { fuegeTopHinzu, vermerkeEinladung } from "@/lib/aktionen";
+import { fuegeTopHinzu, vermerkeEinladung } from "@/lib/aktionen/versammlung";
+import { mitgliedschaft } from "@/lib/auth";
 import { versammlungMitTops } from "@/lib/daten";
 import { formatDatumLang, isoDatum } from "@/lib/format";
 
-export default async function Versammlung({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const v = await versammlungMitTops(id);
+export default async function Versammlung({ params }: { params: Promise<{ wegId: string; id: string }> }) {
+  const { wegId, id } = await params;
+  const { weg, darfBearbeiten } = await mitgliedschaft(wegId);
+  const basis = `/weg/${weg.id}/versammlungen`;
+  const v = await versammlungMitTops(weg.id, id);
   if (!v) notFound();
 
-  const vermerke = vermerkeEinladung.bind(null, v.id);
-  const neuerTop = fuegeTopHinzu.bind(null, v.id);
+  const vermerke = vermerkeEinladung.bind(null, weg.id, v.id);
+  const neuerTop = fuegeTopHinzu.bind(null, weg.id, v.id);
 
   return (
     <>
       <div className="seitenkopf">
         <p className="eyebrow">
-          <Link href="/versammlungen">Versammlungen</Link> / {formatDatumLang(v.datum)}
+          <Link href={basis}>Versammlungen</Link> / {formatDatumLang(v.datum)}
         </p>
         <h1>{v.titel}</h1>
         <p>
@@ -36,6 +39,7 @@ export default async function Versammlung({ params }: { params: Promise<{ id: st
           {formatDatumLang(spaetesterVersand(v.datum, "post"))}
         </p>
         <p className="para">§ 24 Abs. 4 WEG: mindestens drei Wochen ab Zugang. Für Briefe rechnet smartWEG drei Tage Postlaufzeit.</p>
+        {darfBearbeiten && (
         <AktionsFormular className="formular" aktion={vermerke}>
           <div className="felder">
             <label>
@@ -60,6 +64,7 @@ export default async function Versammlung({ params }: { params: Promise<{ id: st
             Versand vermerken
           </button>
         </AktionsFormular>
+        )}
       </section>
 
       <section className="flaeche" aria-labelledby="t-tops">
@@ -70,7 +75,7 @@ export default async function Versammlung({ params }: { params: Promise<{ id: st
           <ul className="liste">
             {v.tops.map((t) => (
               <li key={t.id}>
-                <Link href={`/versammlungen/${v.id}/top/${t.id}`}>
+                <Link href={`${basis}/${v.id}/top/${t.id}`}>
                   TOP {t.nummer} · {t.titel}
                 </Link>
                 <span className="klein">{t.beschlussantrag}</span>
@@ -83,6 +88,7 @@ export default async function Versammlung({ params }: { params: Promise<{ id: st
         )}
       </section>
 
+      {darfBearbeiten && (
       <section className="flaeche" aria-labelledby="t-neuer-top">
         <h2 id="t-neuer-top">Tagesordnungspunkt hinzufügen</h2>
         <AktionsFormular className="formular" aktion={neuerTop}>
@@ -113,6 +119,7 @@ export default async function Versammlung({ params }: { params: Promise<{ id: st
           </button>
         </AktionsFormular>
       </section>
+      )}
     </>
   );
 }

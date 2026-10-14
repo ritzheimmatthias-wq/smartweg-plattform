@@ -5,11 +5,32 @@ CREATE TABLE IF NOT EXISTS weg (
   adresse text NOT NULL,
   stimmrechtsprinzip text NOT NULL DEFAULT 'kopf' CHECK (stimmrechtsprinzip IN ('kopf','objekt','mea'))
 );
+CREATE TABLE IF NOT EXISTS konto (
+  id text PRIMARY KEY,
+  email text NOT NULL UNIQUE,
+  name text NOT NULL,
+  passwort_hash text NOT NULL,
+  erstellt_am timestamp NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS sitzung (
+  token_hash text PRIMARY KEY,
+  konto_id text NOT NULL REFERENCES konto(id) ON DELETE CASCADE,
+  laeuft_ab timestamp NOT NULL
+);
+CREATE TABLE IF NOT EXISTS mitglied (
+  weg_id text NOT NULL REFERENCES weg(id) ON DELETE CASCADE,
+  konto_id text NOT NULL REFERENCES konto(id) ON DELETE CASCADE,
+  rolle text NOT NULL CHECK (rolle IN ('verwalter','eigentuemer')),
+  PRIMARY KEY (weg_id, konto_id)
+);
 CREATE TABLE IF NOT EXISTS person (
   id text PRIMARY KEY,
+  weg_id text NOT NULL REFERENCES weg(id),
+  konto_id text REFERENCES konto(id),
   name text NOT NULL,
   email text
 );
+CREATE INDEX IF NOT EXISTS person_email ON person (lower(email));
 CREATE TABLE IF NOT EXISTS einheit (
   id text PRIMARY KEY,
   weg_id text NOT NULL REFERENCES weg(id),

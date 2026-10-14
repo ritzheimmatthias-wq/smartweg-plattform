@@ -1,94 +1,48 @@
 import Link from "next/link";
-import { FristStatus } from "@/components/frist-status";
-import { aktuelleWeg, beschluesseDerWeg, einheitenDerWeg, versammlungenDerWeg } from "@/lib/daten";
-import { formatDatum, formatZahl, PRINZIP_TEXT } from "@/lib/format";
+import { kontoErforderlich } from "@/lib/auth";
+import { wegsDesKontos } from "@/lib/daten";
 
-export default async function Uebersicht() {
-  const weg = await aktuelleWeg();
-  const [einheiten, versammlungen, beschluesse] = await Promise.all([
-    einheitenDerWeg(weg.id),
-    versammlungenDerWeg(weg.id),
-    beschluesseDerWeg(weg.id),
-  ]);
-  const meaSumme = einheiten.reduce((s, e) => s + e.mea, 0);
-  const eigentuemer = new Set(einheiten.flatMap((e) => e.eigentuemer)).size;
-  const heute = new Date();
-  const naechste = [...versammlungen].reverse().find((v) => v.datum >= new Date(heute.toISOString().slice(0, 10)));
+export default async function MeineGemeinschaften() {
+  const konto = await kontoErforderlich();
+  const wegs = await wegsDesKontos(konto.id);
 
   return (
-    <>
+    <main>
       <div className="seitenkopf">
-        <p className="eyebrow">Übersicht</p>
+        <p className="eyebrow">Willkommen, {konto.name}</p>
         <h1>
-          <span className="light">{weg.name.split(" ")[0]}</span> {weg.name.split(" ").slice(1).join(" ")}
+          <span className="light">Meine</span> Gemeinschaften
         </h1>
-        <p>{weg.adresse}</p>
       </div>
 
-      <div className="raster">
-        <section className="flaeche" aria-labelledby="k-einheiten">
-          <p className="eyebrow" id="k-einheiten">Einheiten</p>
-          <p className="kennzahl">{einheiten.length}</p>
-          <p className="klein">{eigentuemer} Eigentümer · {formatZahl(meaSumme)} MEA</p>
-        </section>
-        <section className="flaeche" aria-labelledby="k-versammlung">
-          <p className="eyebrow" id="k-versammlung">Nächste Versammlung</p>
-          {naechste ? (
-            <>
-              <p className="kennzahl">{formatDatum(naechste.datum)}</p>
-              <FristStatus datum={naechste.datum} versandt={naechste.einladungVersandtAm} weg={naechste.versandweg} />
-              <Link href={`/versammlungen/${naechste.id}`}>Zur Versammlung</Link>
-            </>
-          ) : (
-            <>
-              <p className="klein">Keine Versammlung geplant.</p>
-              <Link href="/versammlungen">Versammlung planen</Link>
-            </>
-          )}
-        </section>
-        <section className="flaeche" aria-labelledby="k-beschluesse">
-          <p className="eyebrow" id="k-beschluesse">Beschlusssammlung</p>
-          <p className="kennzahl">{beschluesse.length}</p>
-          <p className="klein">
-            {beschluesse[0] ? `Zuletzt Nr. ${beschluesse[0].nummer} vom ${formatDatum(beschluesse[0].datum)}` : "Noch keine Einträge"}
+      {wegs.length === 0 ? (
+        <section className="flaeche">
+          <h2>Noch keine Gemeinschaft</h2>
+          <p>
+            Legen Sie Ihre WEG an, wenn Sie sie selbst verwalten. Sind Sie Eigentümer und wurden eingeladen, bitten Sie Ihre
+            Verwaltung, Ihre E-Mail-Adresse <strong>{konto.email}</strong> bei Ihrer Einheit zu hinterlegen.
           </p>
-          <Link href="/beschluesse">Alle Beschlüsse</Link>
+          <Link className="knopf primaer" href="/weg/neu">
+            Gemeinschaft anlegen
+          </Link>
         </section>
-      </div>
-
-      <section className="flaeche" aria-labelledby="t-einheiten">
-        <h2 id="t-einheiten">Einheiten und Eigentümer</h2>
-        <p className="klein">Stimmrecht laut Teilungserklärung: {PRINZIP_TEXT[weg.stimmrechtsprinzip]}</p>
-        <div className="tabelle-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Einheit</th>
-                <th>Eigentümer</th>
-                <th className="zahl">MEA</th>
-                <th className="zahl">Anteil</th>
-              </tr>
-            </thead>
-            <tbody>
-              {einheiten.map((e) => (
-                <tr key={e.id}>
-                  <td>{e.bezeichnung}</td>
-                  <td>{e.namen.join(", ") || "–"}</td>
-                  <td className="zahl">{formatZahl(e.mea)}</td>
-                  <td className="zahl">{((e.mea / meaSumme) * 100).toLocaleString("de-DE", { maximumFractionDigits: 1 })} %</td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan={2}>Summe</td>
-                <td className="zahl">{formatZahl(meaSumme)}</td>
-                <td className="zahl">100 %</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </section>
-    </>
+      ) : (
+        <section className="flaeche">
+          <ul className="liste">
+            {wegs.map((w) => (
+              <li key={w.id}>
+                <Link href={`/weg/${w.id}`}>{w.name}</Link>
+                <span className="klein">
+                  {w.adresse} · {w.rolle === "verwalter" ? "Verwaltung" : "Eigentümer"}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <Link className="knopf" href="/weg/neu">
+            Weitere Gemeinschaft anlegen
+          </Link>
+        </section>
+      )}
+    </main>
   );
 }

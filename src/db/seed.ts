@@ -3,6 +3,7 @@ import type { PgliteDatabase } from "drizzle-orm/pglite";
 import * as s from "./schema";
 
 export const DEMO_WEG_ID = "lindenstrasse-12";
+export const DEMO_KONTO_ID = "demo";
 
 /**
  * Legt die Beispiel-Gemeinschaft „Lindenstraße 12“ an, wenn die Datenbank leer
@@ -20,14 +21,25 @@ export async function seedDemo(db: PgliteDatabase<typeof s>): Promise<void> {
       stimmrechtsprinzip: "mea",
     });
 
-    await tx.insert(s.person).values([
-      { id: "keller", name: "Ursula Keller", email: "u.keller@example.org" },
-      { id: "yilmaz", name: "Deniz Yılmaz", email: "d.yilmaz@example.org" },
-      { id: "weber-j", name: "Jonas Weber", email: "j.weber@example.org" },
-      { id: "weber-a", name: "Anna Weber", email: "a.weber@example.org" },
-      { id: "brandt", name: "Petra Brandt", email: "p.brandt@example.org" },
-      { id: "novak", name: "Milan Novak", email: "m.novak@example.org" },
-    ]);
+    // Das Beispielkonto hat kein gültiges Passwort; man betritt es nur über „Beispiel ansehen“.
+    await tx.insert(s.konto).values({
+      id: DEMO_KONTO_ID,
+      email: "beispiel@smartweg.invalid",
+      name: "Petra Brandt (Beispiel)",
+      passwortHash: "gesperrt",
+    });
+    await tx.insert(s.mitglied).values({ wegId: DEMO_WEG_ID, kontoId: DEMO_KONTO_ID, rolle: "verwalter" });
+
+    await tx.insert(s.person).values(
+      [
+        { id: "keller", name: "Ursula Keller", email: "u.keller@example.org" },
+        { id: "yilmaz", name: "Deniz Yılmaz", email: "d.yilmaz@example.org" },
+        { id: "weber-j", name: "Jonas Weber", email: "j.weber@example.org" },
+        { id: "weber-a", name: "Anna Weber", email: "a.weber@example.org" },
+        { id: "brandt", name: "Petra Brandt", email: "p.brandt@example.org", kontoId: DEMO_KONTO_ID },
+        { id: "novak", name: "Milan Novak", email: "m.novak@example.org" },
+      ].map((p) => ({ ...p, wegId: DEMO_WEG_ID })),
+    );
 
     const einheiten = [
       { id: "eg-li", bezeichnung: "EG links", mea: 168, eigentuemer: ["keller"] },

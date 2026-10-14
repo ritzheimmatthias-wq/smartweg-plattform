@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { AktionsFormular } from "@/components/aktions-formular";
 import { FristStatus } from "@/components/frist-status";
-import { legeVersammlungAn } from "@/lib/aktionen";
-import { aktuelleWeg, versammlungenDerWeg } from "@/lib/daten";
+import { legeVersammlungAn } from "@/lib/aktionen/versammlung";
+import { mitgliedschaft } from "@/lib/auth";
+import { versammlungenDerWeg } from "@/lib/daten";
 import { formatDatumLang } from "@/lib/format";
 
-export default async function Versammlungen() {
-  const weg = await aktuelleWeg();
+export default async function Versammlungen({ params }: { params: Promise<{ wegId: string }> }) {
+  const { wegId } = await params;
+  const { weg, darfBearbeiten } = await mitgliedschaft(wegId);
   const versammlungen = await versammlungenDerWeg(weg.id);
 
   return (
@@ -27,7 +29,7 @@ export default async function Versammlungen() {
           <ul className="liste">
             {versammlungen.map((v) => (
               <li key={v.id}>
-                <Link href={`/versammlungen/${v.id}`}>{v.titel}</Link>
+                <Link href={`/weg/${weg.id}/versammlungen/${v.id}`}>{v.titel}</Link>
                 <span className="klein">
                   {formatDatumLang(v.datum)}, {v.uhrzeit} Uhr · {v.ort}
                   {v.onlineTeilnahme ? " · auch online" : ""}
@@ -39,9 +41,10 @@ export default async function Versammlungen() {
         )}
       </section>
 
+      {darfBearbeiten && (
       <section className="flaeche" aria-labelledby="t-neu">
         <h2 id="t-neu">Neue Versammlung planen</h2>
-        <AktionsFormular className="formular" aktion={legeVersammlungAn}>
+        <AktionsFormular className="formular" aktion={legeVersammlungAn.bind(null, weg.id)}>
           <label>
             Titel
             <input id="v-titel" name="titel" required defaultValue="Ordentliche Eigentümerversammlung" />
@@ -76,6 +79,7 @@ export default async function Versammlungen() {
           </button>
         </AktionsFormular>
       </section>
+      )}
     </>
   );
 }

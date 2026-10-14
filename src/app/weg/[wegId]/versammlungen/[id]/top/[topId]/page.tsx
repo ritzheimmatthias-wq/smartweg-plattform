@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { AktionsFormular } from "@/components/aktions-formular";
 import { Ergebnisbalken } from "@/components/ergebnisbalken";
 import { zaehleStimmen } from "@/domain/abstimmung";
-import { speichereStimmen, verkuendeBeschluss } from "@/lib/aktionen";
-import { aktuelleWeg, beschlussZuTop, einheitenDerWeg, topMitStimmen, versammlungMitTops } from "@/lib/daten";
+import { speichereStimmen, verkuendeBeschluss } from "@/lib/aktionen/versammlung";
+import { mitgliedschaft } from "@/lib/auth";
+import { beschlussZuTop, einheitenDerWeg, topMitStimmen, versammlungMitTops } from "@/lib/daten";
 import { formatDatumLang, formatZahl, PRINZIP_TEXT } from "@/lib/format";
 
 const MEHRHEIT_TEXT = {
@@ -12,25 +13,26 @@ const MEHRHEIT_TEXT = {
   zweiDrittelUndHalbeMea: "Mehr als zwei Drittel der abgegebenen Stimmen und mehr als die Hälfte aller MEA (§ 21 Abs. 2 Nr. 1 WEG)",
 } as const;
 
-export default async function Abstimmung({ params }: { params: Promise<{ id: string; topId: string }> }) {
-  const { id, topId } = await params;
-  const [v, top, weg] = await Promise.all([versammlungMitTops(id), topMitStimmen(topId), aktuelleWeg()]);
+export default async function Abstimmung({ params }: { params: Promise<{ wegId: string; id: string; topId: string }> }) {
+  const { wegId, id, topId } = await params;
+  const { weg, darfBearbeiten } = await mitgliedschaft(wegId);
+  const [v, top] = await Promise.all([versammlungMitTops(weg.id, id), topMitStimmen(id, topId)]);
   if (!v || !top || top.versammlungId !== v.id) notFound();
 
   const einheiten = await einheitenDerWeg(weg.id);
   const ergebnis = zaehleStimmen(einheiten, top.abgaben, weg.stimmrechtsprinzip, top.mehrheit);
   const beschluss = top.verkuendetAm ? await beschlussZuTop(top.id) : null;
   const stimmeVon = new Map(top.abgaben.map((a) => [a.einheitId, a.wert]));
-  const gesperrt = Boolean(top.verkuendetAm);
+  const gesperrt = Boolean(top.verkuendetAm) || !darfBearbeiten;
 
-  const speichern = speichereStimmen.bind(null, v.id, top.id);
-  const verkuenden = verkuendeBeschluss.bind(null, v.id, top.id);
+  const speichern = speichereStimmen.bind(null, weg.id, v.id, top.id);
+  const verkuenden = verkuendeBeschluss.bind(null, weg.id, v.id, top.id);
 
   return (
     <>
       <div className="seitenkopf">
         <p className="eyebrow">
-          <Link href={`/versammlungen/${v.id}`}>{formatDatumLang(v.datum)}</Link> / TOP {top.nummer}
+          <Link href={`/weg/${weg.id}/versammlungen/${v.id}`}>{formatDatumLang(v.datum)}</Link> / TOP {top.nummer}
         </p>
         <h1>{top.titel}</h1>
         <p>{top.beschlussantrag}</p>
@@ -40,7 +42,7 @@ export default async function Abstimmung({ params }: { params: Promise<{ id: str
       </div>
 
       <section className="flaeche" aria-labelledby="t-ergebnis">
-        <h2 id="t-ergebnis">{gesperrt ? "Verkündetes Ergebnis" : "Zwischenstand"}</h2>
+        <h2 id="t-ergebnis">{top.verkuendetAm ? "Verkündetes Ergebnis" : "Zwischenstand"}</h2>
         <Ergebnisbalken ergebnis={ergebnis} />
         {top.abgaben.length > 0 && (
           <p className={`hinweis ${ergebnis.angenommen ? "ok" : ""}`}>
@@ -51,7 +53,7 @@ export default async function Abstimmung({ params }: { params: Promise<{ id: str
         )}
         {beschluss && (
           <p className="klein">
-            Eingetragen als Beschluss Nr. {beschluss.nummer} in der <Link href="/beschluesse">Beschlusssammlung</Link>.
+            Eingetragen als Beschluss Nr. {beschluss.nummer} in der <Link href={`/weg/${weg.id}/beschluesse`}>Beschlusssammlung</Link>.
           </p>
         )}
       </section>
