@@ -54,6 +54,24 @@ CREATE TABLE IF NOT EXISTS versammlung (
   versandweg text NOT NULL DEFAULT 'email' CHECK (versandweg IN ('email','post')),
   einladung_versandt_am date
 );
+CREATE TABLE IF NOT EXISTS einladung (
+  id text PRIMARY KEY,
+  versammlung_id text NOT NULL REFERENCES versammlung(id),
+  person_id text REFERENCES person(id) ON DELETE SET NULL,
+  name text NOT NULL,
+  email text,
+  einheiten text NOT NULL,
+  versandweg text NOT NULL CHECK (versandweg IN ('email','post')),
+  status text NOT NULL CHECK (status IN ('versandt','fehler','offen')),
+  fehler text,
+  testmodus boolean NOT NULL DEFAULT false,
+  versandt_am timestamp,
+  betreff text NOT NULL,
+  inhalt text NOT NULL,
+  token text NOT NULL UNIQUE,
+  bestaetigt_am timestamp,
+  UNIQUE (versammlung_id, person_id)
+);
 CREATE TABLE IF NOT EXISTS top (
   id text PRIMARY KEY,
   versammlung_id text NOT NULL REFERENCES versammlung(id),

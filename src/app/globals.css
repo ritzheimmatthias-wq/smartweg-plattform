@@ -118,3 +118,24 @@ main.schmal { max-width: 560px; }
 .knopf.klein-knopf { padding: 7px 10px; font-size: 13px; }
 .knopf.gefahr { border-color: var(--warn-ink); color: var(--warn-ink); }
 .knopf.gefahr:hover { background: var(--warn-ink); color: var(--white); }
+
+/* Einladung und Fristnachweis */
+.brief { display: grid; gap: 6px; }
+.brief .zeile label { font-size: 12px; }
+.brief-text { white-space: pre-wrap; font-size: 15px; line-height: 1.55; }
+.warn-text { color: var(--warn-ink); font-weight: 600; }
+details summary { cursor: pointer; }
+details[open] summary { margin-bottom: 12px; }
+.druckseite { display: grid; gap: 14px; background: var(--white); border: 1px solid var(--line); padding: 32px; }
+.druckseite h1 { font-size: 26px; }
+.druckseite h2 { font-size: 18px; margin-top: 12px; }
+.druckseite table { font-size: 13px; }
+.absender { font-size: 11px; color: var(--ink-2); border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+.datum { justify-self: end; }
+.brief-betreff { font-size: 18px !important; }
+@media print {
+  .kopf, .wegnav, .demo, .nicht-drucken, footer { display: none !important; }
+  body { background: #fff; }
+  main { padding: 0; max-width: none; }
+  .druckseite { border: 0; padding: 0; }
+}
